@@ -28,7 +28,7 @@ var Command = &passport.Command{
 		}
 
 		fmt.Printf("Name: %s\n", s.Name)
-		fmt.Printf("Value: %s\n", s.GetValue())
+		fmt.Printf("Value: %s\n", s.GetValue(ctx.Crypto))
 		fmt.Printf("Secure: %v\n", s.Secure)
 
 		return nil

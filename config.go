@@ -26,12 +26,12 @@ type Secret struct {
 
 // GetValue returns the secret's value in plain text. If the is
 // encrypted, it will be decrypted before being returned.
-func (s *Secret) GetValue() string {
+func (s *Secret) GetValue(cp CryptoProvider) string {
 	if !s.Secure {
 		return s.Value
 	}
 
-	v, err := DecryptString(s.Value)
+	v, err := cp.DecryptString(s.Value)
 	if err != nil {
 		return ""
 	}
@@ -94,7 +94,7 @@ var (
 // AddSecret saves a new secret in the configuration file, with the
 // given name and value. If the encrypt flag is true, the value
 // will be encrypted before added to the config.
-func (c *Config) AddSecret(name, value string, encrypt bool) error {
+func (c *Config) AddSecret(name, value string, encrypt bool, cp CryptoProvider) error {
 	if name == "" {
 		return ErrSecretNameEmpty
 	}
@@ -104,7 +104,7 @@ func (c *Config) AddSecret(name, value string, encrypt bool) error {
 	}
 
 	if encrypt {
-		secureString, err := EncryptString(value)
+		secureString, err := cp.EncryptString(value)
 		if err != nil {
 			return err
 		}

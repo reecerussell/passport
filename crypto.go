@@ -15,10 +15,23 @@ var (
 	ErrDecryptFailed = errors.New("decrypt: failed to decrypt data")
 )
 
+// CryptoProvider is an interface used to abstract encryption/decryption logic.
+type CryptoProvider interface {
+	EncryptString(value string) (string, error)
+	DecryptString(value string) (string, error)
+}
+
+type hostCryptoProvider struct{}
+
+// NewCryptoProvider returns a new instance of CryptoProvider.
+func NewCryptoProvider() CryptoProvider {
+	return &hostCryptoProvider{}
+}
+
 // EncryptString encrypts a string value using AES256, with a
 // key generated from a host machine's unique identifier.
-func EncryptString(value string) (string, error) {
-	key, err := generateEncryptionKey()
+func (p *hostCryptoProvider) EncryptString(value string) (string, error) {
+	key, err := p.generateEncryptionKey()
 	if err != nil {
 		return "", nil
 	}
@@ -44,8 +57,8 @@ func EncryptString(value string) (string, error) {
 // key generated from a host machine's unique identifier. If
 // value is invalid or cannot be decrypted, ErrDecryptFailed
 // will be returned.
-func DecryptString(value string) (string, error) {
-	key, err := generateEncryptionKey()
+func (p *hostCryptoProvider) DecryptString(value string) (string, error) {
+	key, err := p.generateEncryptionKey()
 	if err != nil {
 		return "", nil
 	}
@@ -75,8 +88,8 @@ func DecryptString(value string) (string, error) {
 	return string(plainText), nil
 }
 
-func generateEncryptionKey() ([]byte, error) {
-	mid, err := getMachineID()
+func (p *hostCryptoProvider) generateEncryptionKey() ([]byte, error) {
+	mid, err := p.getMachineID()
 	if err != nil {
 		return nil, err
 	}

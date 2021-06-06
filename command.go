@@ -87,6 +87,7 @@ type CommandArg struct {
 // function, providing common values.
 type CommandContext struct {
 	ConfigDir string
+	Crypto    CryptoProvider
 }
 
 // CommandSet is a wrapper around []*Command, which provides helper functions.

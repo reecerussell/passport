@@ -15,9 +15,9 @@ var addSecretCommand = &passport.Command{
 
 		name := cmd.Args.String("name")
 		value := cmd.Args.String("value")
-		secure := cmd.Args.Bool("secure")
+		plainText := cmd.Args.Bool("plain-text")
 
-		err = cnf.AddSecret(name, value, secure)
+		err = cnf.AddSecret(name, value, !plainText, ctx.Crypto)
 		if err != nil {
 			return err
 		}

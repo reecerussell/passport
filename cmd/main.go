@@ -48,6 +48,7 @@ func main() {
 
 	ctx := &passport.CommandContext{
 		ConfigDir: configDir,
+		Crypto:    passport.NewCryptoProvider(),
 	}
 
 	err = cmd.Execute(cmd, ctx)
