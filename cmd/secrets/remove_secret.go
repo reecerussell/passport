@@ -8,7 +8,7 @@ var removeSecretCommand = &passport.Command{
 	Name:        "rm",
 	Description: "used to remove a secret",
 	Execute: func(cmd *passport.Command, ctx *passport.CommandContext) error {
-		cnf, err := passport.LoadConfig(ctx.ConfigDir)
+		cnf, err := passport.LoadConfig(ctx.ConfigDir, ctx.Fs)
 		if err != nil {
 			return err
 		}

@@ -12,10 +12,31 @@ var (
 	ErrPathEmpty = errors.New("filesys: path can not be empty")
 )
 
+// Filesys is a high level interface used to interact with a filesystem.
+type Filesys interface {
+	// EnsureDirectory is used to ensure a directory exists.
+	EnsureDirectory(path string) error
+
+	// Write writes data to path. If the files does not exist,
+	// it will be created, otherwise overwritten.
+	Write(path string, data []byte) error
+
+	// FileExists returns a boolean which determines if a file
+	// at a given path exists.
+	FileExists(path string) (bool, error)
+}
+
+type osFilesys struct{}
+
+// NewFilesys returns a new instance of Filesys, based on the host's OS.
+func NewFilesys() Filesys {
+	return &osFilesys{}
+}
+
 // EnsureDirectory attempts to ensure a given directory exists,
 // by creating it if it does not. The directory will be created
 // with os.ModePerm.
-func EnsureDirectory(path string) error {
+func (*osFilesys) EnsureDirectory(path string) error {
 	path = strings.TrimSpace(path)
 	if path == "" {
 		return ErrPathEmpty
@@ -26,7 +47,7 @@ func EnsureDirectory(path string) error {
 
 // Write writes data to dir+file. If the file does not
 // exist, it will be created, otherwise overwritten.
-func Write(path string, data []byte) error {
+func (*osFilesys) Write(path string, data []byte) error {
 	if path == "" {
 		return ErrPathEmpty
 	}
@@ -54,7 +75,7 @@ func Write(path string, data []byte) error {
 
 // FileExists returns a boolean which indicates whether a file
 // at the give path exists.
-func FileExists(path string) (bool, error) {
+func (*osFilesys) FileExists(path string) (bool, error) {
 	if path == "" {
 		return false, ErrPathEmpty
 	}

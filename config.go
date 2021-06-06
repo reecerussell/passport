@@ -12,7 +12,8 @@ const configFilename = "config.yaml"
 
 // Config is a struct which holds and represents the core configuration.
 type Config struct {
-	configDir string `yaml:"-"`
+	configDir string  `yaml:"-"`
+	fs        Filesys `yaml:"-"`
 
 	Secrets []Secret `yaml:"secrets"`
 }
@@ -42,9 +43,9 @@ func (s *Secret) GetValue(cp CryptoProvider) string {
 // EnsureConfigFile ensures a config file exists in the configDir.
 // If a configuration file does not already exist, an empty on
 // will be created.
-func EnsureConfigFile(configDir string) error {
+func EnsureConfigFile(configDir string, fs Filesys) error {
 	filePath := path.Join(configDir, configFilename)
-	exists, err := FileExists(filePath)
+	exists, err := fs.FileExists(filePath)
 	if err != nil {
 		return err
 	}
@@ -62,7 +63,7 @@ func EnsureConfigFile(configDir string) error {
 		return err
 	}
 
-	err = Write(filePath, bytes)
+	err = fs.Write(filePath, bytes)
 	if err != nil {
 		return err
 	}
@@ -72,7 +73,7 @@ func EnsureConfigFile(configDir string) error {
 
 // LoadConfig loads a configuration file from configDir. An
 // error will be returned if one does not exist.
-func LoadConfig(configDir string) (*Config, error) {
+func LoadConfig(configDir string, fs Filesys) (*Config, error) {
 	filePath := path.Join(configDir, configFilename)
 	bytes, err := ioutil.ReadFile(filePath)
 	if err != nil {
@@ -81,6 +82,7 @@ func LoadConfig(configDir string) (*Config, error) {
 
 	var c Config
 	c.configDir = configDir
+	c.fs = fs
 	_ = yaml.Unmarshal(bytes, &c)
 
 	return &c, nil
@@ -170,7 +172,7 @@ func (c *Config) Save() error {
 		return err
 	}
 
-	err = Write(filePath, bytes)
+	err = c.fs.Write(filePath, bytes)
 	if err != nil {
 		return err
 	}

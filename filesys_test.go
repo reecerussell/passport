@@ -9,14 +9,16 @@ import (
 
 func TestEnsureDirectory(t *testing.T) {
 	t.Run("Where Given Path Is Empty", func(t *testing.T) {
+		fs := &osFilesys{}
 		const path = " "
-		err := EnsureDirectory(path)
+		err := fs.EnsureDirectory(path)
 		assert.Equal(t, ErrPathEmpty, err)
 	})
 
 	t.Run("Where Directory Does Not Exist", func(t *testing.T) {
+		fs := &osFilesys{}
 		const path = "TestEnsureDirectory-1"
-		err := EnsureDirectory(path)
+		err := fs.EnsureDirectory(path)
 		assert.NoError(t, err)
 
 		_, err = os.ReadDir(path)
@@ -28,13 +30,14 @@ func TestEnsureDirectory(t *testing.T) {
 	})
 
 	t.Run("Where Directory Already Exists", func(t *testing.T) {
+		fs := &osFilesys{}
 		const path = "TestEnsureDirectory-2"
 		err := os.MkdirAll(path, os.ModePerm)
 		if err != nil {
 			panic(err)
 		}
 
-		err = EnsureDirectory(path)
+		err = fs.EnsureDirectory(path)
 		assert.NoError(t, err)
 
 		_, err = os.ReadDir(path)
