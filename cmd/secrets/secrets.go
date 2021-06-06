@@ -11,7 +11,7 @@ var Command = &passport.Command{
 	Name:        "secrets",
 	Description: "provides commands used to manage and view secrets",
 	Execute: func(cmd *passport.Command, ctx *passport.CommandContext) error {
-		cnf, err := passport.LoadConfig(ctx.ConfigDir)
+		cnf, err := passport.LoadConfig(ctx.ConfigDir, ctx.Fs)
 		if err != nil {
 			return err
 		}
@@ -28,7 +28,7 @@ var Command = &passport.Command{
 		}
 
 		fmt.Printf("Name: %s\n", s.Name)
-		fmt.Printf("Value: %s\n", s.GetValue())
+		fmt.Printf("Value: %s\n", s.GetValue(ctx.Crypto))
 		fmt.Printf("Secure: %v\n", s.Secure)
 
 		return nil

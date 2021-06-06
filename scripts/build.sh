@@ -14,7 +14,7 @@ export GOARCH=amd64
 export CGO_ENABLED=0
 
 echo "Building..."
-go build -o passport.exe \
+go build -o $GOPATH/bin/passport.exe \
     -ldflags "-X main.configDir=$CONFIG_DIR -X main.version=$VERSION" \
     cmd/main.go
 

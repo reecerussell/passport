@@ -25,12 +25,13 @@ func main() {
 		os.Exit(0)
 	}
 
-	err := passport.EnsureDirectory(configDir)
+	fs := passport.NewFilesys()
+	err := fs.EnsureDirectory(configDir)
 	if err != nil {
 		panic(err)
 	}
 
-	err = passport.EnsureConfigFile(configDir)
+	err = passport.EnsureConfigFile(configDir, fs)
 	if err != nil {
 		panic(err)
 	}
@@ -48,6 +49,7 @@ func main() {
 
 	ctx := &passport.CommandContext{
 		ConfigDir: configDir,
+		Crypto:    passport.NewCryptoProvider(),
 	}
 
 	err = cmd.Execute(cmd, ctx)

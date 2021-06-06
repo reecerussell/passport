@@ -8,16 +8,16 @@ var addSecretCommand = &passport.Command{
 	Name:        "add",
 	Description: "used to add a secret",
 	Execute: func(cmd *passport.Command, ctx *passport.CommandContext) error {
-		cnf, err := passport.LoadConfig(ctx.ConfigDir)
+		cnf, err := passport.LoadConfig(ctx.ConfigDir, ctx.Fs)
 		if err != nil {
 			return err
 		}
 
 		name := cmd.Args.String("name")
 		value := cmd.Args.String("value")
-		secure := cmd.Args.Bool("secure")
+		plainText := cmd.Args.Bool("plain-text")
 
-		err = cnf.AddSecret(name, value, secure)
+		err = cnf.AddSecret(name, value, !plainText, ctx.Crypto)
 		if err != nil {
 			return err
 		}
