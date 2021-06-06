@@ -87,8 +87,10 @@ func LoadConfig(configDir string) (*Config, error) {
 }
 
 var (
-	ErrSecretNameEmpty  = errors.New("secret: name cannot be empty")
-	ErrSecretValueEmpty = errors.New("secret: value cannot be empty")
+	ErrSecretNameEmpty     = errors.New("secret: name cannot be empty")
+	ErrSecretValueEmpty    = errors.New("secret: value cannot be empty")
+	ErrSecretNotFound      = errors.New("secret: not found")
+	ErrSecretAlreadyExists = errors.New("secret: already exists")
 )
 
 // AddSecret saves a new secret in the configuration file, with the
@@ -101,6 +103,11 @@ func (c *Config) AddSecret(name, value string, encrypt bool, cp CryptoProvider) 
 
 	if value == "" {
 		return ErrSecretValueEmpty
+	}
+
+	_, err := c.GetSecret(name)
+	if err == nil {
+		return ErrSecretAlreadyExists
 	}
 
 	if encrypt {
@@ -120,8 +127,6 @@ func (c *Config) AddSecret(name, value string, encrypt bool, cp CryptoProvider) 
 
 	return nil
 }
-
-var ErrSecretNotFound = errors.New("secret: not found")
 
 // GetSecret returns a secret from the config, where the name is equal
 // to name. If the secret does not exist, ErrSecretNotFound will be returned.

@@ -14,7 +14,15 @@ func TestConfig_AddSecret(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	cnf := &Config{}
+	cnf := &Config{
+		Secrets: []Secret{
+			{
+				Name:   "mySecret3",
+				Value:  "Hello World",
+				Secure: false,
+			},
+		},
+	}
 
 	t.Run("Given Empty Name", func(t *testing.T) {
 		cp := mock.NewMockCryptoProvider(ctrl)
@@ -82,5 +90,74 @@ func TestConfig_AddSecret(t *testing.T) {
 		}
 
 		assert.True(t, found)
+	})
+
+	t.Run("Where Secret Already Exists", func(t *testing.T) {
+		testName := "mySecret3"
+		testValue := "233432"
+
+		cp := mock.NewMockCryptoProvider(ctrl)
+
+		err := cnf.AddSecret(testName, testValue, false, cp)
+		assert.Equal(t, ErrSecretAlreadyExists, err)
+	})
+}
+
+func TestConfig_GetSecret(t *testing.T) {
+	cnf := &Config{
+		Secrets: []Secret{
+			{
+				Name:   "mySecret",
+				Value:  "Hello World",
+				Secure: false,
+			},
+		},
+	}
+
+	t.Run("Given Empty Name", func(t *testing.T) {
+		s, err := cnf.GetSecret("")
+		assert.Nil(t, s)
+		assert.Equal(t, ErrSecretNameEmpty, err)
+	})
+
+	t.Run("Given Valid Name", func(t *testing.T) {
+		s, err := cnf.GetSecret("mySecret")
+		assert.NoError(t, err)
+		assert.Equal(t, "mySecret", s.Name)
+		assert.Equal(t, "Hello World", s.Value)
+		assert.False(t, s.Secure)
+	})
+
+	t.Run("Where Secret Does Not Exist", func(t *testing.T) {
+		s, err := cnf.GetSecret("myFaveSecret")
+		assert.Nil(t, s)
+		assert.Equal(t, ErrSecretNotFound, err)
+	})
+}
+
+func TestConfig_RemoveSecret(t *testing.T) {
+	cnf := &Config{
+		Secrets: []Secret{
+			{
+				Name:   "mySecret",
+				Value:  "Hello World",
+				Secure: false,
+			},
+		},
+	}
+
+	t.Run("Given Empty Name", func(t *testing.T) {
+		err := cnf.RemoveSecret("")
+		assert.Equal(t, ErrSecretNameEmpty, err)
+	})
+
+	t.Run("Given Valid Name", func(t *testing.T) {
+		err := cnf.RemoveSecret("mySecret")
+		assert.NoError(t, err)
+	})
+
+	t.Run("Where Secret Does Not Exist", func(t *testing.T) {
+		err := cnf.RemoveSecret("myFaveSecret")
+		assert.Equal(t, ErrSecretNotFound, err)
 	})
 }
