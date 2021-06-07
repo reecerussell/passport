@@ -2,6 +2,7 @@ package passport
 
 import (
 	"errors"
+	"io/ioutil"
 	"os"
 	"strings"
 )
@@ -24,6 +25,9 @@ type Filesys interface {
 	// FileExists returns a boolean which determines if a file
 	// at a given path exists.
 	FileExists(path string) (bool, error)
+
+	// Read reads all data from a file at path.
+	Read(path string) ([]byte, error)
 }
 
 type osFilesys struct{}
@@ -90,4 +94,14 @@ func (*osFilesys) FileExists(path string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+// Read reads all data from a file at path. This is a wrapper
+// around ioutil.ReadFile.
+func (*osFilesys) Read(path string) ([]byte, error) {
+	if path == "" {
+		return nil, ErrPathEmpty
+	}
+
+	return ioutil.ReadFile(path)
 }

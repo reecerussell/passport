@@ -48,3 +48,34 @@ func TestEnsureDirectory(t *testing.T) {
 		})
 	})
 }
+
+func TestOsFilesys_Read(t *testing.T) {
+	t.Run("Given Empty Path", func(t *testing.T) {
+		fs := NewFilesys()
+		bytes, err := fs.Read("")
+		assert.Nil(t, bytes)
+		assert.Equal(t, ErrPathEmpty, err)
+	})
+
+	t.Run("Given Valid Path", func(t *testing.T) {
+		testData := []byte("Hello World")
+		testPath := "TestOsFilesys_Read1.txt"
+
+		f, err := os.Create(testPath)
+		if err != nil {
+			panic(err)
+		}
+
+		f.Write(testData)
+		f.Close()
+
+		t.Cleanup(func() {
+			os.Remove(testPath)
+		})
+
+		fs := NewFilesys()
+		data, err := fs.Read(testPath)
+		assert.NoError(t, err)
+		assert.Equal(t, testData, data)
+	})
+}
