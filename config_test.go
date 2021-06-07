@@ -161,3 +161,89 @@ func TestConfig_RemoveSecret(t *testing.T) {
 		assert.Equal(t, ErrSecretNotFound, err)
 	})
 }
+
+func TestConfig_Save(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	t.Run("Saves Config", func(t *testing.T) {
+		mockFilesys := mock.NewMockFilesys(ctrl)
+		mockFilesys.EXPECT().Write("config/"+configFilename, []byte("secrets: []\n")).Return(nil)
+
+		cnf := &Config{
+			configDir: "config",
+			fs:        mockFilesys,
+			Secrets:   make([]Secret, 0),
+		}
+
+		err := cnf.Save()
+		assert.Nil(t, err)
+	})
+
+	t.Run("Write Fails", func(t *testing.T) {
+		testError := errors.New("filesys: test error")
+
+		mockFilesys := mock.NewMockFilesys(ctrl)
+		mockFilesys.EXPECT().Write("config/"+configFilename, []byte("secrets: []\n")).Return(testError)
+
+		cnf := &Config{
+			configDir: "config",
+			fs:        mockFilesys,
+			Secrets:   make([]Secret, 0),
+		}
+
+		err := cnf.Save()
+		assert.Equal(t, testError, err)
+	})
+}
+
+func TestSecret_GetValue(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	t.Run("Where Secret Is Secure", func(t *testing.T) {
+		testSecureValue := "3287ykshd"
+		testValue := "hello world"
+
+		s := &Secret{
+			Value:  testSecureValue,
+			Secure: true,
+		}
+
+		cp := mock.NewMockCryptoProvider(ctrl)
+		cp.EXPECT().DecryptString(testSecureValue).Return(testValue, nil)
+
+		v := s.GetValue(cp)
+		assert.Equal(t, testValue, v)
+	})
+
+	t.Run("Where Secret Is Plain-Text", func(t *testing.T) {
+		testValue := "hello world"
+
+		s := &Secret{
+			Value:  testValue,
+			Secure: false,
+		}
+
+		cp := mock.NewMockCryptoProvider(ctrl)
+
+		v := s.GetValue(cp)
+		assert.Equal(t, testValue, v)
+	})
+
+	t.Run("Where CryptoProvider Fails", func(t *testing.T) {
+		testSecureValue := "3287ykshd"
+		testError := errors.New("crypto: test error")
+
+		s := &Secret{
+			Value:  testSecureValue,
+			Secure: true,
+		}
+
+		cp := mock.NewMockCryptoProvider(ctrl)
+		cp.EXPECT().DecryptString(testSecureValue).Return("", testError)
+
+		v := s.GetValue(cp)
+		assert.Equal(t, "", v)
+	})
+}

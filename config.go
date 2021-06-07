@@ -18,28 +18,6 @@ type Config struct {
 	Secrets []Secret `yaml:"secrets"`
 }
 
-// Secret is a struct which represents a store secret value.
-type Secret struct {
-	Name   string `yaml:"name"`
-	Value  string `yaml:"value"`
-	Secure bool   `yaml:"secure"`
-}
-
-// GetValue returns the secret's value in plain text. If the is
-// encrypted, it will be decrypted before being returned.
-func (s *Secret) GetValue(cp CryptoProvider) string {
-	if !s.Secure {
-		return s.Value
-	}
-
-	v, err := cp.DecryptString(s.Value)
-	if err != nil {
-		return ""
-	}
-
-	return v
-}
-
 // EnsureConfigFile ensures a config file exists in the configDir.
 // If a configuration file does not already exist, an empty on
 // will be created.
@@ -86,6 +64,28 @@ func LoadConfig(configDir string, fs Filesys) (*Config, error) {
 	_ = yaml.Unmarshal(bytes, &c)
 
 	return &c, nil
+}
+
+// Secret is a struct which represents a store secret value.
+type Secret struct {
+	Name   string `yaml:"name"`
+	Value  string `yaml:"value"`
+	Secure bool   `yaml:"secure"`
+}
+
+// GetValue returns the secret's value in plain text. If the is
+// encrypted, it will be decrypted before being returned.
+func (s *Secret) GetValue(cp CryptoProvider) string {
+	if !s.Secure {
+		return s.Value
+	}
+
+	v, err := cp.DecryptString(s.Value)
+	if err != nil {
+		return ""
+	}
+
+	return v
 }
 
 var (
@@ -167,12 +167,8 @@ func (c *Config) RemoveSecret(name string) error {
 // Save writes the current config object to the config file.
 func (c *Config) Save() error {
 	filePath := path.Join(c.configDir, configFilename)
-	bytes, err := yaml.Marshal(c)
-	if err != nil {
-		return err
-	}
-
-	err = c.fs.Write(filePath, bytes)
+	bytes, _ := yaml.Marshal(c)
+	err := c.fs.Write(filePath, bytes)
 	if err != nil {
 		return err
 	}
