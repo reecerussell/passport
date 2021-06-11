@@ -33,19 +33,11 @@ func NewCryptoProvider() CryptoProvider {
 func (p *hostCryptoProvider) EncryptString(value string) (string, error) {
 	key, err := p.generateEncryptionKey()
 	if err != nil {
-		return "", nil
-	}
-
-	c, err := aes.NewCipher(key)
-	if err != nil {
 		return "", err
 	}
 
-	gcm, err := cipher.NewGCM(c)
-	if err != nil {
-		return "", err
-	}
-
+	c, _ := aes.NewCipher(key)
+	gcm, _ := cipher.NewGCM(c)
 	nonce := make([]byte, gcm.NonceSize())
 	rand.Read(nonce)
 
@@ -60,24 +52,12 @@ func (p *hostCryptoProvider) EncryptString(value string) (string, error) {
 func (p *hostCryptoProvider) DecryptString(value string) (string, error) {
 	key, err := p.generateEncryptionKey()
 	if err != nil {
-		return "", nil
-	}
-
-	c, err := aes.NewCipher(key)
-	if err != nil {
 		return "", err
 	}
 
-	gcm, err := cipher.NewGCM(c)
-	if err != nil {
-		return "", err
-	}
-
+	c, _ := aes.NewCipher(key)
+	gcm, _ := cipher.NewGCM(c)
 	nonceSize := gcm.NonceSize()
-	if len(value) < nonceSize {
-		return "", ErrDecryptFailed
-	}
-
 	cipherText, _ := base64.StdEncoding.DecodeString(value)
 	nonce, cipherText := cipherText[:nonceSize], cipherText[nonceSize:]
 	plainText, err := gcm.Open(nil, nonce, cipherText, nil)

@@ -2,6 +2,7 @@ package passport
 
 import (
 	"errors"
+	"io/ioutil"
 	"os"
 	"strings"
 )
@@ -9,7 +10,9 @@ import (
 // This file contains utils for interacting with the os' file system.
 
 var (
-	ErrPathEmpty = errors.New("filesys: path can not be empty")
+	ErrPathEmpty    = errors.New("filesys: path can not be empty")
+	ErrDirNotExists = errors.New("filesys: directory does not exist")
+	ErrFileInUse    = errors.New("filesys: file is use by another process")
 )
 
 // Filesys is a high level interface used to interact with a filesystem.
@@ -24,6 +27,9 @@ type Filesys interface {
 	// FileExists returns a boolean which determines if a file
 	// at a given path exists.
 	FileExists(path string) (bool, error)
+
+	// Read reads all data from a file at path.
+	Read(path string) ([]byte, error)
 }
 
 type osFilesys struct{}
@@ -52,22 +58,14 @@ func (*osFilesys) Write(path string, data []byte) error {
 		return ErrPathEmpty
 	}
 
-	f, err := os.Create(path)
+	err := os.WriteFile(path, data, 0666)
 	if err != nil {
-		if !os.IsExist(err) {
-			return err
+		pe := err.(*os.PathError)
+		if pe.Op == "open" {
+			return ErrDirNotExists
 		}
 
-		f, err = os.OpenFile(path, os.O_RDWR, os.ModePerm)
-		if err != nil {
-			return err
-		}
-	}
-	defer f.Close()
-
-	_, err = f.Write(data)
-	if err != nil {
-		return err
+		return ErrFileInUse
 	}
 
 	return nil
@@ -90,4 +88,14 @@ func (*osFilesys) FileExists(path string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+// Read reads all data from a file at path. This is a wrapper
+// around ioutil.ReadFile.
+func (*osFilesys) Read(path string) ([]byte, error) {
+	if path == "" {
+		return nil, ErrPathEmpty
+	}
+
+	return ioutil.ReadFile(path)
 }
