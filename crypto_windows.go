@@ -13,9 +13,9 @@ func (*hostCryptoProvider) getMachineID() ([]byte, error) {
 	}
 	defer k.Close()
 
-	bytes, _, err := k.GetBinaryValue("MachineGuid")
+	value, _, err := k.GetStringValue("MachineGuid")
 	if err != nil {
 		return nil, err
 	}
-	return bytes, nil
+	return []byte(value), nil
 }
