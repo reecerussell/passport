@@ -2,7 +2,6 @@ package passport
 
 import (
 	"errors"
-	"io/ioutil"
 	"path"
 
 	"gopkg.in/yaml.v3"
@@ -36,11 +35,7 @@ func EnsureConfigFile(configDir string, fs Filesys) error {
 		Secrets: make([]Secret, 0),
 	}
 
-	bytes, err := yaml.Marshal(cnf)
-	if err != nil {
-		return err
-	}
-
+	bytes, _ := yaml.Marshal(cnf)
 	err = fs.Write(filePath, bytes)
 	if err != nil {
 		return err
@@ -53,7 +48,7 @@ func EnsureConfigFile(configDir string, fs Filesys) error {
 // error will be returned if one does not exist.
 func LoadConfig(configDir string, fs Filesys) (*Config, error) {
 	filePath := path.Join(configDir, configFilename)
-	bytes, err := ioutil.ReadFile(filePath)
+	bytes, err := fs.Read(filePath)
 	if err != nil {
 		return nil, err
 	}

@@ -2,6 +2,7 @@ package passport
 
 import (
 	"errors"
+	"path"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -9,6 +10,94 @@ import (
 
 	"github.com/reecerussell/passport/mock"
 )
+
+func TestEnsureConfigFile(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	t.Run("Where File Does Not Exist", func(t *testing.T) {
+		testDir := ".config"
+		testFilePath := path.Join(testDir, configFilename)
+
+		fs := mock.NewMockFilesys(ctrl)
+		fs.EXPECT().FileExists(testFilePath).Return(false, nil)
+		fs.EXPECT().Write(testFilePath, gomock.Any()).Return(nil)
+
+		err := EnsureConfigFile(testDir, fs)
+		assert.NoError(t, err)
+	})
+
+	t.Run("Where FileExists Returns Error", func(t *testing.T) {
+		testDir := ".config"
+		testErr := errors.New("fs: error")
+
+		fs := mock.NewMockFilesys(ctrl)
+		fs.EXPECT().FileExists(path.Join(testDir, configFilename)).Return(false, testErr)
+
+		err := EnsureConfigFile(testDir, fs)
+		assert.Equal(t, testErr, err)
+	})
+
+	t.Run("Where File Already Exists", func(t *testing.T) {
+		testDir := ".config"
+
+		fs := mock.NewMockFilesys(ctrl)
+		fs.EXPECT().FileExists(path.Join(testDir, configFilename)).Return(true, nil)
+
+		err := EnsureConfigFile(testDir, fs)
+		assert.NoError(t, err)
+	})
+
+	t.Run("Where Write Returns Error", func(t *testing.T) {
+		testDir := ".config"
+		testFilePath := path.Join(testDir, configFilename)
+		testErr := errors.New("fs: error")
+
+		fs := mock.NewMockFilesys(ctrl)
+		fs.EXPECT().FileExists(testFilePath).Return(false, nil)
+		fs.EXPECT().Write(testFilePath, gomock.Any()).Return(testErr)
+
+		err := EnsureConfigFile(testDir, fs)
+		assert.Equal(t, testErr, err)
+	})
+}
+
+func TestLoadConfig(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	t.Run("Where Config File Exists", func(t *testing.T) {
+		testDir := ".config"
+		testFilePath := path.Join(testDir, configFilename)
+		testData := `secrets:
+- name: MySecret
+  value: Hello World
+  secure: false`
+
+		fs := mock.NewMockFilesys(ctrl)
+		fs.EXPECT().Read(testFilePath).Return([]byte(testData), nil)
+
+		c, err := LoadConfig(testDir, fs)
+		assert.NoError(t, err)
+		assert.Equal(t, 1, len(c.Secrets))
+		assert.Equal(t, "MySecret", c.Secrets[0].Name)
+		assert.Equal(t, "Hello World", c.Secrets[0].Value)
+		assert.Equal(t, false, c.Secrets[0].Secure)
+	})
+
+	t.Run("Where Read Fails", func(t *testing.T) {
+		testDir := ".config"
+		testFilePath := path.Join(testDir, configFilename)
+		testErr := errors.New("fs: error")
+
+		fs := mock.NewMockFilesys(ctrl)
+		fs.EXPECT().Read(testFilePath).Return(nil, testErr)
+
+		c, err := LoadConfig(testDir, fs)
+		assert.Nil(t, c)
+		assert.Equal(t, testErr, err)
+	})
+}
 
 func TestConfig_AddSecret(t *testing.T) {
 	ctrl := gomock.NewController(t)
