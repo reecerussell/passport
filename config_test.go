@@ -497,6 +497,32 @@ func TestWorkspace_GetScript(t *testing.T) {
 	})
 }
 
+func TestWorkspace_RemoveScript(t *testing.T) {
+	w := &Workspace{
+		Scripts: []*WorkspaceScript{
+			{
+				Name: "build",
+			},
+		},
+	}
+
+	t.Run("Given Empty Name", func(t *testing.T) {
+		err := w.RemoveScript("")
+		assert.Equal(t, ErrWorkspaceScriptNameEmpty, err)
+	})
+
+	t.Run("Given Invalid Name", func(t *testing.T) {
+		err := w.RemoveScript("not-a-script")
+		assert.Equal(t, ErrWorkspaceScriptNotFound, err)
+	})
+
+	t.Run("Given Valid Name", func(t *testing.T) {
+		err := w.RemoveScript("build")
+		assert.NoError(t, err)
+		assert.Equal(t, 0, len(w.Scripts))
+	})
+}
+
 func TestWorkspaceScript_Run(t *testing.T) {
 	t.Run("Given Valid Command", func(t *testing.T) {
 		var command string

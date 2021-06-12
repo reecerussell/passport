@@ -288,6 +288,23 @@ func (w *Workspace) GetScript(name string) (*WorkspaceScript, error) {
 	return nil, ErrWorkspaceScriptNotFound
 }
 
+// RemoveScript removes a script, with the given name, from the workspace.
+func (w *Workspace) RemoveScript(name string) error {
+	if name == "" {
+		return ErrWorkspaceScriptNameEmpty
+	}
+
+	for i, s := range w.Scripts {
+		if s.Name == name {
+			w.Scripts = append(w.Scripts[:i], w.Scripts[i+1:]...)
+
+			return nil
+		}
+	}
+
+	return ErrWorkspaceScriptNotFound
+}
+
 // Run executes the workplace script.
 func (s *WorkspaceScript) Run() (int, error) {
 	args := strings.Split(s.Command, " ")

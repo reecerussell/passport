@@ -47,5 +47,6 @@ var ScriptsCommand = &passport.Command{
 	Cmds: passport.CommandSet{
 		listScriptsCommand,
 		addScriptsCommand,
+		removeScriptsCommand,
 	},
 }
