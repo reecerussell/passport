@@ -106,7 +106,7 @@ func TestConfig_AddSecret(t *testing.T) {
 	defer ctrl.Finish()
 
 	cnf := &Config{
-		Secrets: []Secret{
+		Secrets: []*Secret{
 			{
 				Name:   "mySecret3",
 				Value:  "Hello World",
@@ -196,7 +196,7 @@ func TestConfig_AddSecret(t *testing.T) {
 
 func TestConfig_GetSecret(t *testing.T) {
 	cnf := &Config{
-		Secrets: []Secret{
+		Secrets: []*Secret{
 			{
 				Name:   "mySecret",
 				Value:  "Hello World",
@@ -228,7 +228,7 @@ func TestConfig_GetSecret(t *testing.T) {
 
 func TestConfig_RemoveSecret(t *testing.T) {
 	cnf := &Config{
-		Secrets: []Secret{
+		Secrets: []*Secret{
 			{
 				Name:   "mySecret",
 				Value:  "Hello World",
@@ -266,8 +266,8 @@ func TestConfig_Save(t *testing.T) {
 		cnf := &Config{
 			configDir:  "config",
 			fs:         mockFilesys,
-			Secrets:    make([]Secret, 0),
-			Workspaces: make([]Workspace, 0),
+			Secrets:    make([]*Secret, 0),
+			Workspaces: make([]*Workspace, 0),
 		}
 
 		err := cnf.Save()
@@ -284,8 +284,8 @@ func TestConfig_Save(t *testing.T) {
 		cnf := &Config{
 			configDir:  "config",
 			fs:         mockFilesys,
-			Secrets:    make([]Secret, 0),
-			Workspaces: make([]Workspace, 0),
+			Secrets:    make([]*Secret, 0),
+			Workspaces: make([]*Workspace, 0),
 		}
 
 		err := cnf.Save()
@@ -346,7 +346,7 @@ func TestSecret_GetValue(t *testing.T) {
 
 func TestConfig_AddWorkspace(t *testing.T) {
 	cnf := &Config{
-		Workspaces: []Workspace{
+		Workspaces: []*Workspace{
 			{
 				Name: "MyWorkspace",
 				Path: "/c/test",
@@ -396,7 +396,7 @@ func TestConfig_AddWorkspace(t *testing.T) {
 
 func TestConfig_GetWorkspace(t *testing.T) {
 	cnf := &Config{
-		Workspaces: []Workspace{
+		Workspaces: []*Workspace{
 			{
 				Name: "MyWorkspace",
 				Path: "/c/test",
@@ -407,7 +407,7 @@ func TestConfig_GetWorkspace(t *testing.T) {
 	t.Run("Given Matching Path", func(t *testing.T) {
 		w, err := cnf.GetWorkspace("/c/test")
 		assert.NoError(t, err)
-		assert.Equal(t, &cnf.Workspaces[0], w)
+		assert.Equal(t, cnf.Workspaces[0], w)
 	})
 
 	t.Run("Given Empty Path", func(t *testing.T) {
@@ -427,7 +427,7 @@ func TestWorkspace_AddScript(t *testing.T) {
 	w := &Workspace{
 		Name: "MyWorkspace",
 		Path: "/c/dev",
-		Scripts: []WorkspaceScript{
+		Scripts: []*WorkspaceScript{
 			{
 				Name:    "build",
 				Command: "./build.sh",
@@ -471,7 +471,7 @@ func TestWorkspace_AddScript(t *testing.T) {
 
 func TestWorkspace_GetScript(t *testing.T) {
 	w := &Workspace{
-		Scripts: []WorkspaceScript{
+		Scripts: []*WorkspaceScript{
 			{
 				Name: "build",
 			},
@@ -493,7 +493,7 @@ func TestWorkspace_GetScript(t *testing.T) {
 	t.Run("Given Valid Name", func(t *testing.T) {
 		s, err := w.GetScript("build")
 		assert.NoError(t, err)
-		assert.Equal(t, &w.Scripts[0], s)
+		assert.Equal(t, w.Scripts[0], s)
 	})
 }
 

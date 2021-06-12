@@ -17,8 +17,8 @@ type Config struct {
 	configDir string  `yaml:"-"`
 	fs        Filesys `yaml:"-"`
 
-	Secrets    []Secret    `yaml:"secrets"`
-	Workspaces []Workspace `yaml:"workspaces"`
+	Secrets    []*Secret    `yaml:"secrets"`
+	Workspaces []*Workspace `yaml:"workspaces"`
 }
 
 // Save writes the current config object to the config file.
@@ -48,8 +48,8 @@ func EnsureConfigFile(configDir string, fs Filesys) error {
 	}
 
 	cnf := Config{
-		Secrets:    make([]Secret, 0),
-		Workspaces: make([]Workspace, 0),
+		Secrets:    make([]*Secret, 0),
+		Workspaces: make([]*Workspace, 0),
 	}
 
 	bytes, _ := yaml.Marshal(cnf)
@@ -133,7 +133,7 @@ func (c *Config) AddSecret(name, value string, encrypt bool, cp CryptoProvider) 
 		value = secureString
 	}
 
-	c.Secrets = append(c.Secrets, Secret{
+	c.Secrets = append(c.Secrets, &Secret{
 		Name:   name,
 		Value:  value,
 		Secure: encrypt,
@@ -151,7 +151,7 @@ func (c *Config) GetSecret(name string) (*Secret, error) {
 
 	for _, secret := range c.Secrets {
 		if secret.Name == name {
-			return &secret, nil
+			return secret, nil
 		}
 	}
 
@@ -193,9 +193,9 @@ var (
 // Workspace is a struct which represents a workspace. A workspace
 // contains a number of scripts which can be run in a given directory.
 type Workspace struct {
-	Name    string            `yaml:"name"`
-	Path    string            `yaml:"path"`
-	Scripts []WorkspaceScript `yaml:"scripts"`
+	Name    string             `yaml:"name"`
+	Path    string             `yaml:"path"`
+	Scripts []*WorkspaceScript `yaml:"scripts"`
 }
 
 // WorkspaceScript represents a script which can be run within a workspace.
@@ -225,10 +225,10 @@ func (c *Config) AddWorkspace(name, path string) error {
 		}
 	}
 
-	c.Workspaces = append(c.Workspaces, Workspace{
+	c.Workspaces = append(c.Workspaces, &Workspace{
 		Name:    name,
 		Path:    path,
-		Scripts: make([]WorkspaceScript, 0),
+		Scripts: make([]*WorkspaceScript, 0),
 	})
 
 	return nil
@@ -242,7 +242,7 @@ func (c *Config) GetWorkspace(path string) (*Workspace, error) {
 
 	for _, w := range c.Workspaces {
 		if w.Path == path {
-			return &w, nil
+			return w, nil
 		}
 	}
 
@@ -265,7 +265,7 @@ func (w *Workspace) AddScript(name, command string) error {
 		}
 	}
 
-	w.Scripts = append(w.Scripts, WorkspaceScript{
+	w.Scripts = append(w.Scripts, &WorkspaceScript{
 		Name:    name,
 		Command: command,
 	})
@@ -281,7 +281,7 @@ func (w *Workspace) GetScript(name string) (*WorkspaceScript, error) {
 
 	for _, s := range w.Scripts {
 		if s.Name == name {
-			return &s, nil
+			return s, nil
 		}
 	}
 
