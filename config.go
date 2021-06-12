@@ -2,7 +2,10 @@ package passport
 
 import (
 	"errors"
+	"os"
+	"os/exec"
 	"path"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -14,7 +17,20 @@ type Config struct {
 	configDir string  `yaml:"-"`
 	fs        Filesys `yaml:"-"`
 
-	Secrets []Secret `yaml:"secrets"`
+	Secrets    []Secret    `yaml:"secrets"`
+	Workspaces []Workspace `yaml:"workspaces"`
+}
+
+// Save writes the current config object to the config file.
+func (c *Config) Save() error {
+	filePath := path.Join(c.configDir, configFilename)
+	bytes, _ := yaml.Marshal(c)
+	err := c.fs.Write(filePath, bytes)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // EnsureConfigFile ensures a config file exists in the configDir.
@@ -32,7 +48,8 @@ func EnsureConfigFile(configDir string, fs Filesys) error {
 	}
 
 	cnf := Config{
-		Secrets: make([]Secret, 0),
+		Secrets:    make([]Secret, 0),
+		Workspaces: make([]Workspace, 0),
 	}
 
 	bytes, _ := yaml.Marshal(cnf)
@@ -61,7 +78,7 @@ func LoadConfig(configDir string, fs Filesys) (*Config, error) {
 	return &c, nil
 }
 
-// Secret is a struct which represents a store secret value.
+// Secret is a struct which represents a stored secret value.
 type Secret struct {
 	Name   string `yaml:"name"`
 	Value  string `yaml:"value"`
@@ -159,14 +176,121 @@ func (c *Config) RemoveSecret(name string) error {
 	return ErrSecretNotFound
 }
 
-// Save writes the current config object to the config file.
-func (c *Config) Save() error {
-	filePath := path.Join(c.configDir, configFilename)
-	bytes, _ := yaml.Marshal(c)
-	err := c.fs.Write(filePath, bytes)
-	if err != nil {
-		return err
+// Common workspace errors.
+var (
+	ErrWorkspaceNameEmpty  = errors.New("workspace: name is empty")
+	ErrWorkspaceNameExists = errors.New("workspace: name already exists")
+	ErrWorkspacePathEmpty  = errors.New("workspace: path is empty")
+	ErrWorkspacePathExists = errors.New("workspace: path already exists")
+	ErrWorkspaceNotFound   = errors.New("workspace: not found")
+
+	ErrWorkspaceScriptNameEmpty    = errors.New("script: name is empty")
+	ErrWorkspaceScriptNameExists   = errors.New("script: name already exists")
+	ErrWorkspaceScriptCommandEmpty = errors.New("script: command is empty")
+)
+
+// Workspace is a struct which represents a workspace. A workspace
+// contains a number of scripts which can be run in a given directory.
+type Workspace struct {
+	Name    string            `yaml:"name"`
+	Path    string            `yaml:"path"`
+	Scripts []WorkplaceScript `yaml:"scripts"`
+}
+
+// WorkplaceScript represents a script which can be run within a workspace.
+type WorkplaceScript struct {
+	Name    string `yaml:"name"`
+	Command string `yaml:"command"`
+}
+
+// AddWorkspace is a function used to add a new workspace. This creates
+// a new workspace instance and adds it to the config, c.
+func (c *Config) AddWorkspace(name, path string) error {
+	if name == "" {
+		return ErrWorkspaceNameEmpty
 	}
 
+	if path == "" {
+		return ErrWorkspacePathEmpty
+	}
+
+	for _, w := range c.Workspaces {
+		if w.Name == name {
+			return ErrWorkspaceNameExists
+		}
+
+		if w.Path == path {
+			return ErrWorkspacePathExists
+		}
+	}
+
+	c.Workspaces = append(c.Workspaces, Workspace{
+		Name:    name,
+		Path:    path,
+		Scripts: make([]WorkplaceScript, 0),
+	})
+
 	return nil
+}
+
+// GetWorkspace retrieves a workspace from config, with a matching path.
+func (c *Config) GetWorkspace(path string) (*Workspace, error) {
+	if path == "" {
+		return nil, ErrWorkspacePathEmpty
+	}
+
+	for _, w := range c.Workspaces {
+		if w.Path == path {
+			return &w, nil
+		}
+	}
+
+	return nil, ErrWorkspaceNotFound
+}
+
+// AddScript is used to add a new script to a workspace.
+func (w *Workspace) AddScript(name, command string) error {
+	if name == "" {
+		return ErrWorkspaceScriptNameEmpty
+	}
+
+	if command == "" {
+		return ErrWorkspaceScriptCommandEmpty
+	}
+
+	for _, s := range w.Scripts {
+		if s.Name == name {
+			return ErrWorkspaceScriptNameExists
+		}
+	}
+
+	w.Scripts = append(w.Scripts, WorkplaceScript{
+		Name:    name,
+		Command: command,
+	})
+
+	return nil
+}
+
+func (s *WorkplaceScript) Run() (int, error) {
+	args := strings.Split(s.Command, " ")
+	c := exec.Command(args[0], args[1:]...)
+
+	r, _ := c.StdoutPipe()
+	err := c.Start()
+	if err != nil {
+		return -1, err
+	}
+
+	go func() {
+		buf := make([]byte, 128)
+
+		for {
+			n, _ := r.Read(buf)
+			os.Stdout.Write(buf[:n])
+		}
+	}()
+
+	state, _ := c.Process.Wait()
+	return state.ExitCode(), nil
 }

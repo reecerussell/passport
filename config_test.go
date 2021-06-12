@@ -2,6 +2,8 @@ package passport
 
 import (
 	"errors"
+	"io/ioutil"
+	"os"
 	"path"
 	"testing"
 
@@ -256,13 +258,16 @@ func TestConfig_Save(t *testing.T) {
 	defer ctrl.Finish()
 
 	t.Run("Saves Config", func(t *testing.T) {
+		testData := []byte("secrets: []\nworkspaces: []\n")
+
 		mockFilesys := mock.NewMockFilesys(ctrl)
-		mockFilesys.EXPECT().Write("config/"+configFilename, []byte("secrets: []\n")).Return(nil)
+		mockFilesys.EXPECT().Write("config/"+configFilename, testData).Return(nil)
 
 		cnf := &Config{
-			configDir: "config",
-			fs:        mockFilesys,
-			Secrets:   make([]Secret, 0),
+			configDir:  "config",
+			fs:         mockFilesys,
+			Secrets:    make([]Secret, 0),
+			Workspaces: make([]Workspace, 0),
 		}
 
 		err := cnf.Save()
@@ -270,15 +275,17 @@ func TestConfig_Save(t *testing.T) {
 	})
 
 	t.Run("Write Fails", func(t *testing.T) {
+		testData := []byte("secrets: []\nworkspaces: []\n")
 		testError := errors.New("filesys: test error")
 
 		mockFilesys := mock.NewMockFilesys(ctrl)
-		mockFilesys.EXPECT().Write("config/"+configFilename, []byte("secrets: []\n")).Return(testError)
+		mockFilesys.EXPECT().Write("config/"+configFilename, testData).Return(testError)
 
 		cnf := &Config{
-			configDir: "config",
-			fs:        mockFilesys,
-			Secrets:   make([]Secret, 0),
+			configDir:  "config",
+			fs:         mockFilesys,
+			Secrets:    make([]Secret, 0),
+			Workspaces: make([]Workspace, 0),
 		}
 
 		err := cnf.Save()
@@ -334,5 +341,180 @@ func TestSecret_GetValue(t *testing.T) {
 
 		v := s.GetValue(cp)
 		assert.Equal(t, "", v)
+	})
+}
+
+func TestConfig_AddWorkspace(t *testing.T) {
+	cnf := &Config{
+		Workspaces: []Workspace{
+			{
+				Name: "MyWorkspace",
+				Path: "/c/test",
+			},
+		},
+	}
+
+	t.Run("Given Valid Args", func(t *testing.T) {
+		const testName = "MyTestWorkspace"
+		const testPath = "/t/home"
+
+		err := cnf.AddWorkspace(testName, testPath)
+		assert.NoError(t, err)
+
+		found := false
+
+		for _, w := range cnf.Workspaces {
+			if w.Name == testName {
+				assert.Equal(t, testPath, w.Path)
+				assert.Empty(t, w.Scripts)
+				found = true
+			}
+		}
+		assert.True(t, found)
+	})
+
+	t.Run("Name Is Empty", func(t *testing.T) {
+		err := cnf.AddWorkspace("", "/c/home")
+		assert.Equal(t, ErrWorkspaceNameEmpty, err)
+	})
+
+	t.Run("Path Is Empty", func(t *testing.T) {
+		err := cnf.AddWorkspace("", "/c/home")
+		assert.Equal(t, ErrWorkspaceNameEmpty, err)
+	})
+
+	t.Run("Name Already Exists", func(t *testing.T) {
+		err := cnf.AddWorkspace("MyWorkspace", "/c/home")
+		assert.Equal(t, ErrWorkspaceNameExists, err)
+	})
+
+	t.Run("Path Already Exists", func(t *testing.T) {
+		err := cnf.AddWorkspace("MyNewWorkspace", "/c/test")
+		assert.Equal(t, ErrWorkspacePathExists, err)
+	})
+}
+
+func TestConfig_GetWorkspace(t *testing.T) {
+	cnf := &Config{
+		Workspaces: []Workspace{
+			{
+				Name: "MyWorkspace",
+				Path: "/c/test",
+			},
+		},
+	}
+
+	t.Run("Given Matching Path", func(t *testing.T) {
+		w, err := cnf.GetWorkspace("/c/test")
+		assert.NoError(t, err)
+		assert.Equal(t, &cnf.Workspaces[0], w)
+	})
+
+	t.Run("Given Empty Path", func(t *testing.T) {
+		w, err := cnf.GetWorkspace("")
+		assert.Nil(t, w)
+		assert.Equal(t, ErrWorkspacePathEmpty, err)
+	})
+
+	t.Run("Given Invalid Path", func(t *testing.T) {
+		w, err := cnf.GetWorkspace("not-a-workspace")
+		assert.Nil(t, w)
+		assert.Equal(t, ErrWorkspaceNotFound, err)
+	})
+}
+
+func TestWorkspace_AddScript(t *testing.T) {
+	w := &Workspace{
+		Name: "MyWorkspace",
+		Path: "/c/dev",
+		Scripts: []WorkplaceScript{
+			{
+				Name:    "build",
+				Command: "./build.sh",
+			},
+		},
+	}
+
+	t.Run("Given Valid Args", func(t *testing.T) {
+		const testName = "MyTestScript"
+		const testCommand = "main.exe"
+
+		err := w.AddScript(testName, testCommand)
+		assert.NoError(t, err)
+
+		found := false
+
+		for _, s := range w.Scripts {
+			if s.Name == testName {
+				assert.Equal(t, testCommand, s.Command)
+				found = true
+			}
+		}
+		assert.True(t, found)
+	})
+
+	t.Run("Name Is Empty", func(t *testing.T) {
+		err := w.AddScript("", "./hello.sh")
+		assert.Equal(t, ErrWorkspaceScriptNameEmpty, err)
+	})
+
+	t.Run("Command Is Empty", func(t *testing.T) {
+		err := w.AddScript("my-script", "")
+		assert.Equal(t, ErrWorkspaceScriptCommandEmpty, err)
+	})
+
+	t.Run("Name Already Exists", func(t *testing.T) {
+		err := w.AddScript("build", "./hello.sh")
+		assert.Equal(t, ErrWorkspaceScriptNameExists, err)
+	})
+}
+
+func TestWorkspaceScript_Run(t *testing.T) {
+	t.Run("Given Valid Command", func(t *testing.T) {
+		var command string
+		if os.Getenv("GOOS") != "linux" {
+			command = "cmd /C echo Hello World"
+		} else {
+			command = "echo Hello World"
+		}
+
+		pr, pw, err := os.Pipe()
+		if err != nil {
+			panic(err)
+		}
+
+		oldStdout := os.Stdout
+		os.Stdout = pw
+
+		t.Cleanup(func() {
+			pw.Close()
+			os.Stdout = oldStdout
+		})
+
+		s := WorkplaceScript{
+			Command: command,
+		}
+
+		code, err := s.Run()
+		assert.NoError(t, err)
+		assert.Equal(t, 0, code)
+
+		pw.Close()
+		os.Stdout = oldStdout
+
+		bytes, _ := ioutil.ReadAll(pr)
+		output := string(bytes)
+
+		assert.Contains(t, output, "Hello World")
+	})
+
+	t.Run("Given Invalid Command", func(t *testing.T) {
+		s := WorkplaceScript{
+			Command: "no-a-valid-file.test",
+		}
+
+		code, err := s.Run()
+		assert.NotNil(t, err)
+		assert.Equal(t, -1, code)
 	})
 }
