@@ -427,7 +427,7 @@ func TestWorkspace_AddScript(t *testing.T) {
 	w := &Workspace{
 		Name: "MyWorkspace",
 		Path: "/c/dev",
-		Scripts: []WorkplaceScript{
+		Scripts: []WorkspaceScript{
 			{
 				Name:    "build",
 				Command: "./build.sh",
@@ -469,6 +469,34 @@ func TestWorkspace_AddScript(t *testing.T) {
 	})
 }
 
+func TestWorkspace_GetScript(t *testing.T) {
+	w := &Workspace{
+		Scripts: []WorkspaceScript{
+			{
+				Name: "build",
+			},
+		},
+	}
+
+	t.Run("Given Empty Name", func(t *testing.T) {
+		s, err := w.GetScript("")
+		assert.Nil(t, s)
+		assert.Equal(t, ErrWorkspaceScriptNameEmpty, err)
+	})
+
+	t.Run("Given Invalid Name", func(t *testing.T) {
+		s, err := w.GetScript("not-a-script")
+		assert.Nil(t, s)
+		assert.Equal(t, ErrWorkspaceScriptNotFound, err)
+	})
+
+	t.Run("Given Valid Name", func(t *testing.T) {
+		s, err := w.GetScript("build")
+		assert.NoError(t, err)
+		assert.Equal(t, &w.Scripts[0], s)
+	})
+}
+
 func TestWorkspaceScript_Run(t *testing.T) {
 	t.Run("Given Valid Command", func(t *testing.T) {
 		var command string
@@ -491,7 +519,7 @@ func TestWorkspaceScript_Run(t *testing.T) {
 			os.Stdout = oldStdout
 		})
 
-		s := WorkplaceScript{
+		s := WorkspaceScript{
 			Command: command,
 		}
 
@@ -509,7 +537,7 @@ func TestWorkspaceScript_Run(t *testing.T) {
 	})
 
 	t.Run("Given Invalid Command", func(t *testing.T) {
-		s := WorkplaceScript{
+		s := WorkspaceScript{
 			Command: "no-a-valid-file.test",
 		}
 

@@ -187,6 +187,7 @@ var (
 	ErrWorkspaceScriptNameEmpty    = errors.New("script: name is empty")
 	ErrWorkspaceScriptNameExists   = errors.New("script: name already exists")
 	ErrWorkspaceScriptCommandEmpty = errors.New("script: command is empty")
+	ErrWorkspaceScriptNotFound     = errors.New("script: not found")
 )
 
 // Workspace is a struct which represents a workspace. A workspace
@@ -194,11 +195,11 @@ var (
 type Workspace struct {
 	Name    string            `yaml:"name"`
 	Path    string            `yaml:"path"`
-	Scripts []WorkplaceScript `yaml:"scripts"`
+	Scripts []WorkspaceScript `yaml:"scripts"`
 }
 
-// WorkplaceScript represents a script which can be run within a workspace.
-type WorkplaceScript struct {
+// WorkspaceScript represents a script which can be run within a workspace.
+type WorkspaceScript struct {
 	Name    string `yaml:"name"`
 	Command string `yaml:"command"`
 }
@@ -227,7 +228,7 @@ func (c *Config) AddWorkspace(name, path string) error {
 	c.Workspaces = append(c.Workspaces, Workspace{
 		Name:    name,
 		Path:    path,
-		Scripts: make([]WorkplaceScript, 0),
+		Scripts: make([]WorkspaceScript, 0),
 	})
 
 	return nil
@@ -264,7 +265,7 @@ func (w *Workspace) AddScript(name, command string) error {
 		}
 	}
 
-	w.Scripts = append(w.Scripts, WorkplaceScript{
+	w.Scripts = append(w.Scripts, WorkspaceScript{
 		Name:    name,
 		Command: command,
 	})
@@ -272,7 +273,23 @@ func (w *Workspace) AddScript(name, command string) error {
 	return nil
 }
 
-func (s *WorkplaceScript) Run() (int, error) {
+// GetScript retrives a script from w, with the given name.
+func (w *Workspace) GetScript(name string) (*WorkspaceScript, error) {
+	if name == "" {
+		return nil, ErrWorkspaceScriptNameEmpty
+	}
+
+	for _, s := range w.Scripts {
+		if s.Name == name {
+			return &s, nil
+		}
+	}
+
+	return nil, ErrWorkspaceScriptNotFound
+}
+
+// Run executes the workplace script.
+func (s *WorkspaceScript) Run() (int, error) {
 	args := strings.Split(s.Command, " ")
 	c := exec.Command(args[0], args[1:]...)
 
