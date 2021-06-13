@@ -1,8 +1,8 @@
-# Passport
+# :blue_book: Passport
 
 Passport is a Command-Line tool, used to manage scripts and provide an easy way to execute long/complex commands - with further support for managing secrets. Using the concept of workspaces, a workspace represents a directory, along with a number of scripts which can be executed in the given directory.
 
-## Example
+## :mag: Example
 
 As an example, I have a Dockerfile which I need to build. This Dockerfile has a long list of, potentially secret, build arguments that need to be passed to it. Passport can be used to store and execute the long command with ease - this also saves having to type the command over and over again!
 
