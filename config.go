@@ -2,9 +2,11 @@ package passport
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path"
+	"regexp"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -193,6 +195,9 @@ var (
 // Workspace is a struct which represents a workspace. A workspace
 // contains a number of scripts which can be run in a given directory.
 type Workspace struct {
+	// Config is a pointer to the parent Config object.
+	c *Config `yaml:"-"`
+
 	Name    string             `yaml:"name"`
 	Path    string             `yaml:"path"`
 	Scripts []*WorkspaceScript `yaml:"scripts"`
@@ -200,6 +205,9 @@ type Workspace struct {
 
 // WorkspaceScript represents a script which can be run within a workspace.
 type WorkspaceScript struct {
+	// Config is used to provide the Run function with secrets.
+	c *Config `yaml:"-"`
+
 	Name    string `yaml:"name"`
 	Command string `yaml:"command"`
 }
@@ -242,6 +250,7 @@ func (c *Config) GetWorkspace(path string) (*Workspace, error) {
 
 	for _, w := range c.Workspaces {
 		if w.Path == path {
+			w.c = c
 			return w, nil
 		}
 	}
@@ -281,6 +290,7 @@ func (w *Workspace) GetScript(name string) (*WorkspaceScript, error) {
 
 	for _, s := range w.Scripts {
 		if s.Name == name {
+			s.c = w.c
 			return s, nil
 		}
 	}
@@ -306,12 +316,29 @@ func (w *Workspace) RemoveScript(name string) error {
 }
 
 // Run executes the workplace script.
-func (s *WorkspaceScript) Run() (int, error) {
-	args := strings.Split(s.Command, " ")
-	c := exec.Command(args[0], args[1:]...)
+func (s *WorkspaceScript) Run(cp CryptoProvider) (int, error) {
+	const secretPattern = "\\${{[ ]*secrets\\.([a-zA-Z0-9-_]+)[ ]*}}"
+	re := regexp.MustCompile(secretPattern)
+	cmdTxt := s.Command
+	for re.MatchString(cmdTxt) {
+		t := re.FindString(cmdTxt)
+		re2 := regexp.MustCompile(secretPattern)
+		sn := re2.FindStringSubmatch(t)[1]
+		s, err := s.c.GetSecret(sn)
+		if err == nil {
+			v := s.GetValue(cp)
+			cmdTxt = strings.ReplaceAll(cmdTxt, t, v)
+		}
+	}
 
+	args, err := splitCommandToArgs(cmdTxt)
+	if err != nil {
+		return -1, err
+	}
+
+	c := exec.Command(args[0], args[1:]...)
 	r, _ := c.StdoutPipe()
-	err := c.Start()
+	err = c.Start()
 	if err != nil {
 		return -1, err
 	}
@@ -327,4 +354,69 @@ func (s *WorkspaceScript) Run() (int, error) {
 
 	state, _ := c.Process.Wait()
 	return state.ExitCode(), nil
+}
+
+func splitCommandToArgs(txt string) ([]string, error) {
+	var args []string
+	state := "start"
+	current := ""
+	quote := "\""
+	escapeNext := true
+	for i := 0; i < len(txt); i++ {
+		c := txt[i]
+
+		if state == "quotes" {
+			if string(c) != quote {
+				current += string(c)
+			} else {
+				args = append(args, current)
+				current = ""
+				state = "start"
+			}
+			continue
+		}
+
+		if escapeNext {
+			current += string(c)
+			escapeNext = false
+			continue
+		}
+
+		if c == '\\' {
+			escapeNext = true
+			continue
+		}
+
+		if c == '"' || c == '\'' {
+			state = "quotes"
+			quote = string(c)
+			continue
+		}
+
+		if state == "arg" {
+			if c == ' ' || c == '\t' {
+				args = append(args, current)
+				current = ""
+				state = "start"
+			} else {
+				current += string(c)
+			}
+			continue
+		}
+
+		if c != ' ' && c != '\t' {
+			state = "arg"
+			current += string(c)
+		}
+	}
+
+	if state == "quotes" {
+		return []string{}, fmt.Errorf("unclosed quote in command: %s", txt)
+	}
+
+	if current != "" {
+		args = append(args, current)
+	}
+
+	return args, nil
 }

@@ -379,8 +379,8 @@ func TestConfig_AddWorkspace(t *testing.T) {
 	})
 
 	t.Run("Path Is Empty", func(t *testing.T) {
-		err := cnf.AddWorkspace("", "/c/home")
-		assert.Equal(t, ErrWorkspaceNameEmpty, err)
+		err := cnf.AddWorkspace("MyNewWorkspace", "")
+		assert.Equal(t, ErrWorkspacePathEmpty, err)
 	})
 
 	t.Run("Name Already Exists", func(t *testing.T) {
@@ -524,12 +524,15 @@ func TestWorkspace_RemoveScript(t *testing.T) {
 }
 
 func TestWorkspaceScript_Run(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
 	t.Run("Given Valid Command", func(t *testing.T) {
 		var command string
 		if os.Getenv("GOOS") != "linux" {
-			command = "cmd /C echo Hello World"
+			command = "cmd /C echo \"Hello World, ${{ secrets.greeting }}\""
 		} else {
-			command = "echo Hello World"
+			command = "echo \"Hello World, ${{ secrets.greeting }}\""
 		}
 
 		pr, pw, err := os.Pipe()
@@ -546,10 +549,20 @@ func TestWorkspaceScript_Run(t *testing.T) {
 		})
 
 		s := WorkspaceScript{
+			c: &Config{
+				Secrets: []*Secret{
+					{
+						Name:  "greeting",
+						Value: "hi",
+					},
+				},
+			},
 			Command: command,
 		}
 
-		code, err := s.Run()
+		cp := mock.NewMockCryptoProvider(ctrl)
+
+		code, err := s.Run(cp)
 		assert.NoError(t, err)
 		assert.Equal(t, 0, code)
 
@@ -559,15 +572,29 @@ func TestWorkspaceScript_Run(t *testing.T) {
 		bytes, _ := ioutil.ReadAll(pr)
 		output := string(bytes)
 
-		assert.Contains(t, output, "Hello World")
+		assert.Contains(t, output, "Hello World, hi")
 	})
 
-	t.Run("Given Invalid Command", func(t *testing.T) {
+	t.Run("Given Invalid Command File", func(t *testing.T) {
 		s := WorkspaceScript{
 			Command: "no-a-valid-file.test",
 		}
 
-		code, err := s.Run()
+		cp := mock.NewMockCryptoProvider(ctrl)
+
+		code, err := s.Run(cp)
+		assert.NotNil(t, err)
+		assert.Equal(t, -1, code)
+	})
+
+	t.Run("Given Invalid Command", func(t *testing.T) {
+		s := WorkspaceScript{
+			Command: "no-a-valid-file.test --arg \\\"hello world\" ",
+		}
+
+		cp := mock.NewMockCryptoProvider(ctrl)
+
+		code, err := s.Run(cp)
 		assert.NotNil(t, err)
 		assert.Equal(t, -1, code)
 	})

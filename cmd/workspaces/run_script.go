@@ -34,7 +34,7 @@ var RunScriptCommand = &passport.Command{
 			return err
 		}
 
-		exitCode, err := s.Run()
+		exitCode, err := s.Run(ctx.Crypto)
 		if err != nil {
 			return err
 		}
