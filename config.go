@@ -356,6 +356,7 @@ func (s *WorkspaceScript) Run(cp CryptoProvider) (int, error) {
 	return state.ExitCode(), nil
 }
 
+// https://stackoverflow.com/a/46973603
 func splitCommandToArgs(txt string) ([]string, error) {
 	var args []string
 	state := "start"
