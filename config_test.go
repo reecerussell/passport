@@ -530,9 +530,9 @@ func TestWorkspaceScript_Run(t *testing.T) {
 	t.Run("Given Valid Command", func(t *testing.T) {
 		var command string
 		if os.Getenv("GOOS") != "linux" {
-			command = "cmd /C echo \"Hello World, ${{ secrets.greeting }}\""
+			command = "cmd /C echo \"Hello World, <secrets.greeting>\""
 		} else {
-			command = "echo \"Hello World, ${{ secrets.greeting }}\""
+			command = "echo \"Hello World, <secrets.greeting>\""
 		}
 
 		pr, pw, err := os.Pipe()

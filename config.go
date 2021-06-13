@@ -317,7 +317,7 @@ func (w *Workspace) RemoveScript(name string) error {
 
 // Run executes the workplace script.
 func (s *WorkspaceScript) Run(cp CryptoProvider) (int, error) {
-	const secretPattern = "\\${{[ ]*secrets\\.([a-zA-Z0-9-_]+)[ ]*}}"
+	const secretPattern = "<secrets\\.([a-zA-Z0-9-_]+)>"
 	re := regexp.MustCompile(secretPattern)
 	cmdTxt := s.Command
 	for re.MatchString(cmdTxt) {
