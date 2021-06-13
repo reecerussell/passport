@@ -7,6 +7,7 @@ import (
 
 	"github.com/reecerussell/passport"
 	"github.com/reecerussell/passport/cmd/secrets"
+	"github.com/reecerussell/passport/cmd/workspaces"
 )
 
 var (
@@ -38,6 +39,8 @@ func main() {
 
 	sets := passport.CommandSet{
 		secrets.Command,
+		workspaces.ScriptsCommand,
+		workspaces.RunScriptCommand,
 	}
 
 	cmd := sets.ParseCommand(os.Args[1:])
@@ -50,6 +53,7 @@ func main() {
 	ctx := &passport.CommandContext{
 		ConfigDir: configDir,
 		Crypto:    passport.NewCryptoProvider(),
+		Fs:        passport.NewFilesys(),
 	}
 
 	err = cmd.Execute(cmd, ctx)
