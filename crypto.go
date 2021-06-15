@@ -7,6 +7,8 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
+
+	"github.com/denisbrodbeck/machineid"
 )
 
 var (
@@ -69,7 +71,7 @@ func (p *hostCryptoProvider) DecryptString(value string) (string, error) {
 }
 
 func (p *hostCryptoProvider) generateEncryptionKey() ([]byte, error) {
-	mid, err := p.getMachineID()
+	mid, err := machineid.ID()
 	if err != nil {
 		return nil, err
 	}
