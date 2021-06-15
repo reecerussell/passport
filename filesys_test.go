@@ -5,7 +5,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/gofrs/flock"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -107,30 +106,6 @@ func TestOsFilesys_Write(t *testing.T) {
 		fs := NewFilesys()
 		err := fs.Write(testPath, testData)
 		assert.Equal(t, ErrDirNotExists, err)
-	})
-
-	t.Run("Where File Is In Use", func(t *testing.T) {
-		testPath := "TestOsFilesys_Write4"
-		testData := []byte("Hello World")
-
-		f, err := os.Create(testPath)
-		if err != nil {
-			panic(err)
-		}
-
-		f.Write([]byte("My File"))
-		f.Close()
-		fl := flock.New(testPath)
-		fl.Lock()
-
-		t.Cleanup(func() {
-			fl.Unlock()
-			os.Remove(testPath)
-		})
-
-		fs := NewFilesys()
-		err = fs.Write(testPath, testData)
-		assert.Equal(t, ErrFileInUse, err)
 	})
 }
 

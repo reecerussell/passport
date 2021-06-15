@@ -12,7 +12,6 @@ import (
 var (
 	ErrPathEmpty    = errors.New("filesys: path can not be empty")
 	ErrDirNotExists = errors.New("filesys: directory does not exist")
-	ErrFileInUse    = errors.New("filesys: file is use by another process")
 )
 
 // Filesys is a high level interface used to interact with a filesystem.
@@ -65,7 +64,7 @@ func (*osFilesys) Write(path string, data []byte) error {
 			return ErrDirNotExists
 		}
 
-		return ErrFileInUse
+		return err
 	}
 
 	return nil
