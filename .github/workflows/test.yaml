@@ -1,0 +1,46 @@
+name: test
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - "**.go"
+
+jobs:
+  test-win:
+    name: "Test Windows"
+    runs-on: windows-latest
+    steps:
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '^1.16'
+      
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Test
+        run: go test ./...
+        env:
+          GOOS: windows
+          CGO_ENABLED: 0
+
+  test-linux:
+    name: "Test Linux"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '^1.16'
+      
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Test
+        run: go test ./...
+        env:
+          GOOS: linux
+          CGO_ENABLED: 0
