@@ -3,6 +3,7 @@ package passport
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path"
@@ -337,20 +338,33 @@ func (s *WorkspaceScript) Run(cp CryptoProvider) (int, error) {
 	}
 
 	c := exec.Command(args[0], args[1:]...)
-	r, _ := c.StdoutPipe()
+	outRdr, _ := c.StdoutPipe()
+	errRdr, _ := c.StderrPipe()
 	err = c.Start()
 	if err != nil {
 		return -1, err
 	}
 
+	r := io.MultiReader(outRdr, errRdr)
+
+	// read is used to indicate whether the whole output has been read or not.
+	read := make(chan struct{}, 1)
+
 	go func() {
 		buf := make([]byte, 128)
 
 		for {
-			n, _ := r.Read(buf)
+			n, err := r.Read(buf)
+			if err == io.EOF {
+				read <- struct{}{}
+				return
+			}
+
 			os.Stdout.Write(buf[:n])
 		}
 	}()
+
+	<-read
 
 	state, _ := c.Process.Wait()
 	return state.ExitCode(), nil
